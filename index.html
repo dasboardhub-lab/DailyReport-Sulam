@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SLA Report - Daily Performance</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js & Datalabels -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <!-- Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Config Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', '-apple-system', 'sans-serif'] },
+                    colors: {
+                        ios: { 
+                            blue: '#007AFF', 
+                            bg: '#F2F2F7', 
+                            card: 'rgba(255, 255, 255, 0.72)',
+                            text: '#1C1C1E', 
+                            green: '#34C759', 
+                            red: '#FF3B30', 
+                            orange: '#FF9500',
+                            gray: '#8E8E93'
+                        }
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.04)',
+                        'island': '0 8px 20px rgba(0,0,0,0.25)',
+                        'soft': '0 4px 20px -2px rgba(0,0,0,0.05)'
+                    },
+                    animation: {
+                        'island-pop': 'islandPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        'fade-in': 'fadeIn 0.4s ease-out',
+                        'float': 'float 3s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #F5F5F7;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(0, 122, 255, 0.08) 0, transparent 50%), 
+                radial-gradient(at 90% 10%, rgba(255, 59, 48, 0.05) 0, transparent 50%), 
+                radial-gradient(at 50% 90%, rgba(52, 199, 89, 0.08) 0, transparent 50%);
+            background-attachment: fixed;
+            background-size: cover;
+            color: #1D1D1F;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel { 
+            background: rgba(255, 255, 255, 0.65); 
+            backdrop-filter: blur(24px); 
+            -webkit-backdrop-filter: blur(24px); 
+            border: 1px solid rgba(255, 255, 255, 0.6); 
+            box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.04);
+        }
+        
+        .glass-nav { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: saturate(180%) blur(20px); 
+            -webkit-backdrop-filter: saturate(180%) blur(20px); 
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05); 
+        }
+
+        /* Inputs */
+        .ios-input { 
+            background: #EFEEF0; 
+            border: 1px solid transparent; 
+            border-radius: 12px; 
+            padding: 12px 16px; 
+            font-size: 14px; 
+            font-weight: 500;
+            transition: all 0.2s; 
+            color: #1D1D1F;
+        }
+        .ios-input:focus { 
+            background: #FFFFFF; 
+            border-color: #007AFF; 
+            outline: none; 
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15); 
+        }
+        
+        /* Table Input Cells */
+        .input-cell input { 
+            width: 100%; text-align: center; background: transparent; 
+            border: 1px solid transparent; border-radius: 8px; padding: 6px; 
+            font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
+        }
+        .input-cell input:focus { 
+            background: white; border-color: #007AFF; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .total-cell input { font-weight: 800; color: #007AFF; }
+        
+        /* Utility */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Dynamic Island Animation */
+        .dynamic-island {
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: top center;
+        }
+        .dynamic-island.active {
+            width: auto;
+            min-width: 300px;
+            border-radius: 28px;
+            padding: 12px 20px;
+        }
+        .dynamic-island.idle {
+            width: 0px; 
+            min-width: 0px;
+            height: 0px;
+            padding: 0;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.8) translateY(-20px);
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        
+        .nav-active { background: #007AFF; color: white !important; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25); }
+        .nav-item { transition: all 0.3s ease; }
+        
+        /* Table Header */
+        .table-header-custom th { 
+            background-color: #DBEAFE; 
+            color: #1E3A8A; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            font-size: 0.7rem; 
+            letter-spacing: 0.05em; 
+            border-bottom: 2px solid #BFDBFE;
+        }
+        
+        /* Toggle Switch */
+        .type-toggle-btn.active { background-color: #FFFFFF; color: #007AFF; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .type-toggle-btn { color: #8E8E93; background-color: transparent; }
+
+        /* Custom Multi Select */
+        .multi-select-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #E5E5EA;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            z-index: 100;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 4px;
+            padding: 4px;
+        }
+        .multi-select-dropdown.show { display: block; }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .checkbox-item:hover { background-color: #F2F2F7; }
+        .checkbox-item input { margin-right: 10px; accent-color: #007AFF; width: 16px; height: 16px; }
+        .checkbox-item label { font-size: 12px; font-weight: 600; color: #1D1D1F; flex: 1; cursor: pointer; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col overflow-x-hidden">
+
+    <!-- --- DYNAMIC ISLAND NOTIFICATION --- -->
+    <div class="fixed top-4 left-0 right-0 z-[100] flex justify-center pointer-events-none">
+        <div id="dynamic-island" class="dynamic-island idle bg-black text-white shadow-island flex items-center justify-between gap-4 pointer-events-auto">
+            <div class="flex items-center gap-3">
+                <div id="island-icon" class="text-xl"></div>
+                <div class="flex flex-col">
+                    <span id="island-title" class="text-xs font-bold text-gray-400 leading-none mb-0.5">Notification</span>
+                    <span id="island-msg" class="text-sm font-semibold leading-none">Message</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- GLOBAL LOADER --- -->
+    <div id="global-loader" class="fixed inset-0 z-[60] bg-white/80 backdrop-blur-md flex items-center justify-center hidden transition-all duration-300">
+        <div class="flex flex-col items-center">
+            <div class="relative w-12 h-12 mb-4">
+                <svg class="animate-spin text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <p id="loader-text" class="text-xs font-bold text-gray-400 tracking-wider uppercase animate-pulse">Loading...</p>
+        </div>
+    </div>
+
+    <!-- --- LOGIN PAGE --- -->
+    <div id="login-page" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 w-full h-full bg-[#F5F5F7]">
+        <div class="w-full max-w-[360px] flex flex-col items-center animate-fade-in">
+            <div class="w-24 h-24 bg-gradient-to-br from-[#007AFF] to-[#00C7BE] rounded-[28px] flex items-center justify-center mb-8 shadow-2xl shadow-blue-500/20 transform hover:scale-105 transition-transform duration-500">
+                <i class="fa-solid fa-chart-pie text-white text-4xl"></i>
+            </div>
+            
+            <div class="glass-panel w-full p-8 rounded-[32px] flex flex-col items-center relative overflow-hidden">
+                <h1 class="text-2xl font-bold text-[#1D1D1F] mb-1">Welcome Back</h1>
+                <p class="text-gray-400 text-sm mb-8 font-medium">Masuk untuk mengakses laporan</p>
+
+                <div class="bg-[#EFEEF0] p-1 rounded-xl w-full flex mb-6 relative">
+                    <div class="w-full grid grid-cols-2 relative z-10">
+                        <button onclick="switchLoginTab('user')" id="tab-login-user" class="py-2 text-xs font-bold rounded-[10px] transition-all shadow-sm bg-white text-black">PIC / User</button>
+                        <button onclick="switchLoginTab('admin')" id="tab-login-admin" class="py-2 text-xs font-bold rounded-[10px] transition-all text-gray-500 hover:text-gray-700">Admin</button>
+                    </div>
+                </div>
+
+                <form id="login-form" class="w-full space-y-4">
+                    <input type="hidden" id="login-type" value="user">
+                    <div id="username-container">
+                        <input type="text" id="username" class="ios-input w-full text-center placeholder:text-gray-400" placeholder="Masukkan NIK" required>
+                    </div>
+                    <div>
+                        <input type="password" id="password" class="ios-input w-full text-center placeholder:text-gray-400" placeholder="Password" required>
+                    </div>
+                    <button type="submit" class="w-full bg-[#007AFF] hover:bg-[#0062cc] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all mt-4 text-sm">
+                        Sign In
+                    </button>
+                </form>
+                
+                <div id="login-error" class="mt-4 text-center text-red-500 text-xs font-bold hidden bg-red-50 px-4 py-2 rounded-lg w-full">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> <span>Error message</span>
+                </div>
+            </div>
+            <p class="mt-8 text-xs text-gray-400">© 2026 Daily Report System</p>
+        </div>
+    </div>
+
+    <!-- --- MAIN APP --- -->
+    <div id="main-app" class="hidden flex-1 flex flex-col relative min-h-screen">
+        
+        <!-- TOP NAVIGATION -->
+        <header class="fixed top-0 left-0 right-0 z-40 glass-nav h-16 px-4 md:px-8 flex items-center justify-between transition-all">
+            <div class="flex items-center gap-3 shrink-0">
+                <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-file-shield text-sm"></i>
+                </div>
+                <span class="font-bold text-[#1D1D1F] text-lg tracking-tight">SLA Report</span>
+            </div>
+
+            <nav class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:block">
+                <div class="flex items-center bg-[#EFEEF0] p-1 rounded-full border border-white/50">
+                    <button onclick="showTab('dashboard')" id="nav-dashboard" class="nav-item nav-active px-5 py-1.5 rounded-full text-xs font-bold text-gray-500 flex items-center gap-2">
+                        Dashboard
+                    </button>
+                    <button onclick="showTab('reports')" id="nav-reports" class="nav-item px-5 py-1.5 rounded-full text-xs font-bold text-gray-500 flex items-center gap-2">
+                        Reports
+                    </button>
+                    <button onclick="showTab('settings')" id="nav-settings" class="nav-item hidden px-5 py-1.5 rounded-full text-xs font-bold text-gray-500 flex items-center gap-2">
+                        Admin
+                    </button>
+                </div>
+            </nav>
+
+            <div class="md:hidden absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex bg-[#EFEEF0] p-1 rounded-xl">
+                 <button onclick="showTab('dashboard')" class="p-2 text-gray-600 active:text-blue-500"><i class="fa-solid fa-chart-pie"></i></button>
+                 <button onclick="showTab('reports')" class="p-2 text-gray-600 active:text-blue-500"><i class="fa-solid fa-list"></i></button>
+                 <button onclick="showTab('settings')" id="mobile-nav-settings" class="hidden p-2 text-gray-600 active:text-blue-500"><i class="fa-solid fa-gear"></i></button>
+            </div>
+
+            <div class="flex items-center gap-4 shrink-0">
+                <div class="text-right hidden sm:block leading-tight">
+                    <p id="user-display-name" class="text-xs font-bold text-[#1D1D1F]">User</p>
+                    <p id="user-display-role" class="text-[10px] text-blue-500 font-bold uppercase tracking-wide">Role</p>
+                </div>
+                <button onclick="openConfirmLogout()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENT AREA -->
+        <main class="flex-1 w-full max-w-[1400px] mx-auto pt-24 px-4 md:px-6 pb-12 animate-fade-in">
+            
+            <!-- 1. DASHBOARD TAB -->
+            <div id="tab-dashboard" class="space-y-6">
+                <!-- Header & Filters -->
+                <div class="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-[#1D1D1F] tracking-tight">Overview</h2>
+                        <p class="text-gray-500 text-sm">Update performa harian Anda.</p>
+                    </div>
+                    
+                    <!-- Modified: Removed overflow-x-auto, added flex-wrap and relative z-20 -->
+                    <div class="glass-panel p-1.5 rounded-2xl flex flex-wrap items-center gap-2 shadow-soft relative z-20">
+                        <div class="flex items-center bg-[#F2F2F7] rounded-xl px-3 py-1.5 gap-2">
+                            <i class="fa-regular fa-calendar text-gray-400 text-xs"></i>
+                            <input type="date" id="dash-date-start" class="bg-transparent text-xs font-bold text-gray-700 outline-none w-24">
+                            <span class="text-gray-300 text-xs">→</span>
+                            <input type="date" id="dash-date-end" class="bg-transparent text-xs font-bold text-gray-700 outline-none w-24">
+                        </div>
+                        <div class="h-6 w-px bg-gray-200 hidden md:block"></div>
+                        
+                        <!-- Custom Multi Select SS -->
+                        <div class="relative w-32" id="filter-ss-container">
+                            <button onclick="toggleMultiSelect('dropdown-ss')" class="w-full bg-[#F2F2F7] rounded-xl px-3 py-1.5 text-xs font-bold text-gray-600 flex justify-between items-center outline-none">
+                                <span id="label-ss">Semua SS</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+                            </button>
+                            <div id="dropdown-ss" class="multi-select-dropdown min-w-[150px]">
+                                <!-- Options injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Custom Multi Select Service -->
+                        <div class="relative w-32" id="filter-svc-container">
+                            <button onclick="toggleMultiSelect('dropdown-svc')" class="w-full bg-[#F2F2F7] rounded-xl px-3 py-1.5 text-xs font-bold text-gray-600 flex justify-between items-center outline-none">
+                                <span id="label-svc">All Service</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+                            </button>
+                            <div id="dropdown-svc" class="multi-select-dropdown min-w-[120px]">
+                                <div class="checkbox-item"><input type="checkbox" value="all" checked id="chk-svc-all" onchange="handleMultiSelect('svc', 'all')"><label for="chk-svc-all">All Service</label></div>
+                                <div class="checkbox-item"><input type="checkbox" value="REG" class="chk-svc-opt" onchange="handleMultiSelect('svc')"><label>REG</label></div>
+                                <div class="checkbox-item"><input type="checkbox" value="ECO" class="chk-svc-opt" onchange="handleMultiSelect('svc')"><label>ECO</label></div>
+                                <div class="checkbox-item"><input type="checkbox" value="ND" class="chk-svc-opt" onchange="handleMultiSelect('svc')"><label>ND</label></div>
+                                <div class="checkbox-item"><input type="checkbox" value="SD/SDS" class="chk-svc-opt" onchange="handleMultiSelect('svc')"><label>SD/SDS</label></div>
+                                <div class="checkbox-item"><input type="checkbox" value="BIG" class="chk-svc-opt" onchange="handleMultiSelect('svc')"><label>BIG</label></div>
+                            </div>
+                        </div>
+
+                        <button onclick="resetFilters()" class="w-8 h-8 flex items-center justify-center bg-white hover:bg-red-50 rounded-lg text-red-500 shadow-sm border border-gray-100 transition-colors group">
+                            <i class="fa-solid fa-rotate-right group-hover:rotate-180 transition-transform duration-500"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI CARDS GRID -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <!-- Total Vol -->
+                    <div class="glass-panel p-5 rounded-[24px] flex flex-col justify-between h-32 hover:-translate-y-1 transition-transform duration-300 group">
+                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-box-open text-lg animate-float"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Total Vol</p>
+                            <h3 id="kpi-val-total" class="text-2xl font-bold text-[#1D1D1F]">0</h3>
+                        </div>
+                    </div>
+                    <!-- Success -->
+                    <div class="glass-panel p-5 rounded-[24px] flex flex-col justify-between h-32 hover:-translate-y-1 transition-transform duration-300 relative overflow-hidden group">
+                        <div class="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <i class="fa-solid fa-medal text-8xl text-green-500 transform rotate-12"></i>
+                        </div>
+                        <div class="w-10 h-10 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform z-10">
+                            <i class="fa-solid fa-shield-check text-lg animate-float"></i>
+                        </div>
+                        <div class="z-10">
+                            <div class="flex justify-between items-end">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Success</p>
+                                <span id="kpi-badge-ok" class="text-[10px] font-bold text-white px-2 py-0.5 rounded-full transition-colors duration-300 bg-gray-300">0%</span>
+                            </div>
+                            <h3 id="kpi-val-ok" class="text-2xl font-bold text-[#1D1D1F]">0</h3>
+                        </div>
+                    </div>
+                    <!-- In Progress -->
+                    <div class="glass-panel p-5 rounded-[24px] flex flex-col justify-between h-32 hover:-translate-y-1 transition-transform duration-300 group">
+                        <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-arrows-rotate text-lg group-hover:animate-spin"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">In Progress</p>
+                            <h3 id="kpi-val-prog" class="text-2xl font-bold text-[#1D1D1F]">0</h3>
+                        </div>
+                    </div>
+                    <!-- MBH -->
+                    <div class="glass-panel p-5 rounded-[24px] flex flex-col justify-between h-32 hover:-translate-y-1 transition-transform duration-300 group">
+                        <div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-hourglass-half text-lg animate-float"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">MBH</p>
+                            <h3 id="kpi-val-mbh" class="text-2xl font-bold text-[#1D1D1F]">0</h3>
+                        </div>
+                    </div>
+                    <!-- Missed -->
+                    <div class="glass-panel p-5 rounded-[24px] flex flex-col justify-between h-32 hover:-translate-y-1 transition-transform duration-300 border border-red-50 group">
+                        <div class="w-10 h-10 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-triangle-exclamation text-lg animate-pulse"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Missed</p>
+                            <h3 id="kpi-val-miss" class="text-2xl font-bold text-red-600">0</h3>
+                        </div>
+                    </div>
+                    <!-- Claim -->
+                    <div class="glass-panel p-5 rounded-[24px] flex flex-col justify-between h-32 hover:-translate-y-1 transition-transform duration-300 group" id="kpi-card-claim">
+                        <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-money-bill-transfer text-lg animate-float"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Claim</p>
+                            <h3 id="kpi-val-claim" class="text-2xl font-bold text-[#1D1D1F]">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Area -->
+                <div class="space-y-6">
+                    <div class="glass-panel p-6 rounded-[32px] min-h-[400px] flex flex-col relative shadow-soft">
+                        <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-[#1D1D1F]">Annual Trend</h3>
+                                <p class="text-xs text-gray-400">Performa volume & SLA tahun berjalan</p>
+                            </div>
+                            <!-- Type Toggle -->
+                            <div class="flex bg-[#F2F2F7] p-1 rounded-xl w-max self-start md:self-auto">
+                                <button onclick="setDashType('delivery')" id="dash-toggle-delivery" class="type-toggle-btn active px-4 py-1.5 rounded-[9px] text-xs font-bold transition-all flex items-center gap-2">
+                                    Delivery
+                                </button>
+                                <button onclick="setDashType('pickup')" id="dash-toggle-pickup" class="type-toggle-btn px-4 py-1.5 rounded-[9px] text-xs font-bold transition-all flex items-center gap-2">
+                                    Pickup
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex-1 w-full relative"><canvas id="chartAnnual"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Monthly Chart -->
+                 <div class="glass-panel p-6 rounded-[32px] h-[350px] flex flex-col shadow-soft">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-[#1D1D1F]">Daily Performance</h3>
+                        <p class="text-xs text-gray-400">Grafik 30 hari terakhir</p>
+                    </div>
+                    <div class="flex-1 w-full relative"><canvas id="chartMonthly"></canvas></div>
+                </div>
+
+                <!-- Tables -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-panel rounded-[24px] overflow-hidden flex flex-col shadow-soft">
+                        <div class="p-5 border-b border-gray-100 bg-white/40 backdrop-blur-sm">
+                            <h3 class="text-sm font-bold text-[#1D1D1F]">Staging Performance</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead class="table-header-custom">
+                                    <tr>
+                                        <th class="p-3 pl-5">SS Name</th>
+                                        <th class="p-3 text-right">Total</th>
+                                        <th class="p-3 text-right">OK</th>
+                                        <th class="p-3 text-center">% SLA</th>
+                                        <th class="p-3 text-right text-gray-400">Inp</th>
+                                        <th class="p-3 text-right text-orange-400">MBH</th>
+                                        <th class="p-3 text-right text-red-400">Mis</th>
+                                        <th class="p-3 text-right pr-5 text-purple-400 claim-col">Clm</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="body-breakdown-staging" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="glass-panel rounded-[24px] overflow-hidden flex flex-col shadow-soft">
+                        <div class="p-5 border-b border-gray-100 bg-white/40 backdrop-blur-sm">
+                            <h3 class="text-sm font-bold text-[#1D1D1F]">Service Breakdown</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead class="table-header-custom">
+                                    <tr>
+                                        <th class="p-3 pl-5">Service</th>
+                                        <th class="p-3 text-right">Total</th>
+                                        <th class="p-3 text-right">OK</th>
+                                        <th class="p-3 text-center">% SLA</th>
+                                        <th class="p-3 text-right text-gray-400">Inp</th>
+                                        <th class="p-3 text-right text-orange-400">MBH</th>
+                                        <th class="p-3 text-right text-red-400">Mis</th>
+                                        <th class="p-3 text-right pr-5 text-purple-400 claim-col">Clm</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="body-breakdown-service" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feedback -->
+                <div class="glass-panel p-6 rounded-[24px] shadow-soft">
+                    <h3 class="text-sm font-bold text-[#1D1D1F] mb-6">Feedback Issues</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Internal -->
+                        <div class="bg-blue-50/40 rounded-[20px] p-5 border border-blue-100/50 flex flex-col h-full relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-24 h-24 bg-blue-100/50 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                            <div class="flex items-baseline gap-2 mb-4 z-10">
+                                <span id="feedback-total-int" class="text-4xl font-bold text-blue-600 tracking-tight">0</span>
+                                <span class="text-[10px] font-bold text-blue-400 uppercase tracking-widest bg-white/80 px-2 py-1 rounded-md shadow-sm">INTERNAL</span>
+                            </div>
+                            <div class="flex-1 overflow-y-auto max-h-40 pr-2 custom-scrollbar z-10">
+                                <ul id="feedback-list-int" class="text-xs space-y-3"></ul>
+                            </div>
+                        </div>
+                        <!-- External -->
+                        <div class="bg-orange-50/40 rounded-[20px] p-5 border border-orange-100/50 flex flex-col h-full relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-24 h-24 bg-orange-100/50 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                            <div class="flex items-baseline gap-2 mb-4 z-10">
+                                <span id="feedback-total-ext" class="text-4xl font-bold text-orange-600 tracking-tight">0</span>
+                                <span class="text-[10px] font-bold text-orange-400 uppercase tracking-widest bg-white/80 px-2 py-1 rounded-md shadow-sm">EXTERNAL</span>
+                            </div>
+                            <div class="flex-1 overflow-y-auto max-h-40 pr-2 custom-scrollbar z-10">
+                                <ul id="feedback-list-ext" class="text-xs space-y-3"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. REPORTS TAB -->
+            <div id="tab-reports" class="hidden space-y-6">
+                <!-- HISTORY LIST -->
+                <div id="view-reports-list" class="glass-panel rounded-[32px] p-6 animate-fade-in shadow-soft">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-[#1D1D1F]">Riwayat Laporan</h3>
+                            <p class="text-xs text-gray-400">Database SLA PICKUP & Delivery</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                            <div class="flex items-center bg-[#F2F2F7] rounded-xl px-3 py-2 gap-2">
+                                <input type="date" id="hist-date-start" class="bg-transparent text-xs font-bold text-gray-600 outline-none w-24">
+                                <span class="text-gray-300 text-xs">→</span>
+                                <input type="date" id="hist-date-end" class="bg-transparent text-xs font-bold text-gray-600 outline-none w-24">
+                            </div>
+                            <div class="relative">
+                                <select id="filter-user" class="appearance-none bg-[#F2F2F7] rounded-xl py-2 px-4 pr-8 text-xs font-bold text-gray-600 outline-none"><option value="all">Semua SS</option></select>
+                                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400"><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
+                            </div>
+                            <button onclick="toggleReportForm(true)" id="btn-add-report" class="bg-[#1D1D1F] hover:bg-black text-white w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105 shadow-lg">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-auto max-h-[70vh] relative rounded-xl border border-gray-100">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-[#F9F9FB] sticky top-0 z-20 table-header-custom">
+                                <tr>
+                                    <th class="p-3 text-xs border-b border-blue-200">Date</th>
+                                    <th class="p-3 text-xs border-b border-blue-200">Identity</th>
+                                    <th class="p-3 text-xs border-b border-blue-200">Type</th>
+                                    <th class="p-3 text-xs border-b border-blue-200">Details</th>
+                                    <th class="p-3 text-xs border-b border-blue-200 text-center">Int</th>
+                                    <th class="p-3 text-xs border-b border-blue-200 text-center">Ext</th>
+                                    <th class="p-3 text-xs border-b border-blue-200 w-64">Notes</th>
+                                    <th class="p-3 text-xs border-b border-blue-200 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reports-table-body" class="text-xs divide-y divide-gray-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- INPUT FORM -->
+                <div id="view-reports-form" class="hidden glass-panel rounded-[32px] p-6 md:p-8 relative animate-fade-in shadow-soft">
+                     <div id="edit-mode-indicator" class="hidden absolute top-0 left-0 right-0 bg-orange-400 text-white text-center py-1.5 text-xs font-bold rounded-t-[32px] z-20">
+                        Editing Mode
+                    </div>
+                    
+                    <div class="flex items-center gap-4 mb-8 mt-2">
+                        <button onclick="toggleReportForm(false); cancelEditMode()" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-2xl font-bold text-[#1D1D1F]">New Report</h2>
+                            <p class="text-sm text-gray-400">Pastikan data valid sebelum submit.</p>
+                        </div>
+                    </div>
+
+                    <form id="report-form" class="space-y-6" onkeydown="return event.key != 'Enter';">
+                        <input type="hidden" id="report-id-hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-4 rounded-2xl border border-gray-200 bg-white/50">
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-3 ml-1">General Info</label>
+                                <div class="space-y-4">
+                                    <input type="date" id="input-date" class="ios-input w-full font-bold text-[#1D1D1F]">
+                                    <div class="bg-[#EFEEF0] p-1 rounded-xl flex">
+                                        <button type="button" onclick="selectReportType('delivery')" id="btn-type-delivery" class="flex-1 py-2.5 rounded-[9px] text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm bg-white text-[#007AFF]">
+                                            Delivery
+                                        </button>
+                                        <button type="button" onclick="selectReportType('pickup')" id="btn-type-pickup" class="flex-1 py-2.5 rounded-[9px] text-xs font-bold flex items-center justify-center gap-2 transition-all text-gray-500">
+                                            Pickup
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="input-type" value="delivery">
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-2xl border border-gray-200 bg-white/50">
+                                <div id="admin-user-select-container" class="hidden mb-4">
+                                    <label class="block text-[10px] font-bold text-blue-500 uppercase mb-1 ml-1">Input As (Admin Mode)</label>
+                                    <select id="input-admin-select-user" onchange="updateReporterInfo()" class="ios-input w-full text-xs"><option value="">-- Pilih User --</option></select>
+                                </div>
+                                <div class="space-y-4">
+                                    <div><label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">PIC Name</label><input type="text" id="input-pic-name" class="ios-input w-full text-gray-500 bg-gray-100" readonly><input type="hidden" id="input-pic-id"></div>
+                                    <div><label class="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">SS Code</label><input type="text" id="input-kode-ss" class="ios-input w-full text-gray-500 bg-gray-100" readonly></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm border-collapse"><thead id="table-header" class="table-header-custom border-b border-blue-200"></thead><tbody id="table-body" class="divide-y divide-gray-100"></tbody></table>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end pt-4">
+                            <button type="submit" id="btn-submit-report" class="bg-[#007AFF] hover:bg-[#0062cc] text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all flex items-center gap-2">
+                                <span id="btn-submit-text">Submit Report</span> <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 3. SETTINGS TAB -->
+            <div id="tab-settings" class="hidden space-y-6">
+                <!-- Settings Content ... -->
+                <div class="glass-panel p-8 rounded-[32px] flex flex-col gap-6 shadow-soft">
+                    <h3 class="text-lg font-bold text-[#1D1D1F]">Global Configuration</h3>
+                    
+                    <!-- Admin Code -->
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase ml-1">Admin Passcode</label>
+                        <input type="text" id="setting-admin-code" class="ios-input w-full mt-1 text-center font-mono tracking-[4px] text-lg font-bold text-[#1D1D1F]" placeholder="••••••">
+                    </div>
+
+                    <div class="h-px bg-gray-200 w-full"></div>
+
+                    <!-- SLA Config -->
+                    <div>
+                        <h4 class="text-sm font-bold text-[#1D1D1F] mb-4 flex items-center gap-2"><i class="fa-solid fa-sliders text-blue-500"></i> SLA Threshold Configuration</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Delivery Config -->
+                            <div class="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                                    <p class="text-xs font-bold text-blue-600 uppercase tracking-wider">Delivery</p>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 rounded-full bg-[#34C759]"></div>
+                                            <span class="text-xs font-bold text-gray-500">Target (Green) >=</span>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="number" step="0.1" id="sla-del-green" class="ios-input w-20 text-center py-1.5 px-1 text-xs font-bold bg-white">
+                                            <span class="absolute right-2 top-1.5 text-[10px] text-gray-400 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 rounded-full bg-[#FF9500]"></div>
+                                            <span class="text-xs font-bold text-gray-500">Warning (Orange) >=</span>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="number" step="0.1" id="sla-del-orange" class="ios-input w-20 text-center py-1.5 px-1 text-xs font-bold bg-white">
+                                            <span class="absolute right-2 top-1.5 text-[10px] text-gray-400 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-[10px] text-red-400 font-medium text-right mt-1 italic">
+                                        *Below Warning is Red
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pickup Config -->
+                            <div class="bg-orange-50/50 p-5 rounded-2xl border border-orange-100">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                                    <p class="text-xs font-bold text-orange-600 uppercase tracking-wider">Pickup</p>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 rounded-full bg-[#34C759]"></div>
+                                            <span class="text-xs font-bold text-gray-500">Target (Green) >=</span>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="number" step="0.1" id="sla-pick-green" class="ios-input w-20 text-center py-1.5 px-1 text-xs font-bold bg-white">
+                                            <span class="absolute right-2 top-1.5 text-[10px] text-gray-400 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 rounded-full bg-[#FF9500]"></div>
+                                            <span class="text-xs font-bold text-gray-500">Warning (Orange) >=</span>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="number" step="0.1" id="sla-pick-orange" class="ios-input w-20 text-center py-1.5 px-1 text-xs font-bold bg-white">
+                                            <span class="absolute right-2 top-1.5 text-[10px] text-gray-400 font-bold">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-[10px] text-red-400 font-medium text-right mt-1 italic">
+                                        *Below Warning is Red
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="saveGlobalSettings()" class="bg-[#1D1D1F] text-white font-bold py-3.5 px-8 rounded-xl text-sm w-full md:w-auto hover:scale-105 transition-transform self-end shadow-lg">
+                        Save Configuration
+                    </button>
+                </div>
+                
+                <div class="glass-panel rounded-[32px] overflow-hidden flex flex-col shadow-soft mt-6">
+                    <div class="p-6 border-b border-gray-100 bg-white/40 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-bold text-[#1D1D1F]">User Management</h3>
+                            <p class="text-xs text-gray-400">Kelola akses tim.</p>
+                        </div>
+                        <button onclick="prepareAddUser()" class="bg-[#007AFF] text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 hover:scale-105 transition-transform"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-[#F9F9FB] border-b border-gray-200"><tr><th class="p-4 text-xs font-bold text-gray-500 uppercase">User Info</th><th class="p-4 text-xs font-bold text-gray-500 uppercase">Role</th><th class="p-4 text-center text-xs font-bold text-gray-500 uppercase">Status</th><th class="p-4 text-center text-xs font-bold text-gray-500 uppercase">Action</th></tr></thead><tbody id="users-table-body" class="divide-y divide-gray-100 bg-white text-xs"></tbody></table></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODALS (Re-styled) -->
+    <div id="modal-add-user" class="fixed inset-0 bg-black/30 backdrop-blur-sm hidden z-50 flex items-center justify-center p-6">
+        <div class="bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-[28px] p-6 shadow-2xl animate-island-pop">
+            <div class="flex justify-between items-center mb-6"><h3 id="modal-title" class="font-bold text-xl text-[#1D1D1F]">New User</h3><button onclick="closeAddUserModal()" class="w-8 h-8 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button></div>
+            <form id="add-user-form" class="space-y-4">
+                <input type="hidden" id="edit-user-id">
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="new-role" onchange="toggleFormFields()" class="ios-input w-full text-xs font-bold"><option value="leader">Leader</option><option value="coordinator">Coordinator</option><option value="visitor">Visitor</option></select>
+                    <select id="new-account-status" class="ios-input w-full text-xs font-bold"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+                </div>
+                <input type="text" id="new-name" class="ios-input w-full font-bold" placeholder="Full Name" required>
+                <div class="grid grid-cols-2 gap-3"><input type="text" id="new-username" class="ios-input w-full" placeholder="Numeric ID" required><input type="text" id="new-password" class="ios-input w-full" placeholder="Password" required></div>
+                <div id="leader-fields" class="grid grid-cols-2 gap-3"><input type="text" id="new-kode-ss" class="ios-input w-full" placeholder="SS Code"><input type="text" id="new-kota" class="ios-input w-full" placeholder="City"></div>
+                <button type="submit" class="w-full bg-[#007AFF] text-white font-bold py-3.5 rounded-xl mt-2 shadow-lg shadow-blue-500/20">Save User</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-auth-code" class="fixed inset-0 bg-black/30 backdrop-blur-sm hidden z-50 flex items-center justify-center p-6">
+        <div class="bg-white/90 backdrop-blur-xl w-full max-w-xs rounded-[28px] p-8 shadow-2xl text-center animate-island-pop">
+            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-lock text-gray-500"></i></div>
+            <h3 class="font-bold text-lg mb-1">Security Check</h3><p class="text-xs text-gray-400 mb-6">Enter admin passcode to continue.</p><input type="password" id="auth-code-input" class="ios-input w-full text-center tracking-[4px] text-lg font-bold mb-6" placeholder="••••••">
+            <div class="grid grid-cols-2 gap-3"><button onclick="closeAuthModal()" class="py-3 bg-gray-100 rounded-xl font-bold text-xs text-gray-600">Cancel</button><button onclick="verifyAuthCode()" class="py-3 bg-[#007AFF] text-white rounded-xl font-bold text-xs">Verify</button></div>
+        </div>
+    </div>
+    
+    <div id="modal-confirm-delete" class="fixed inset-0 bg-black/30 backdrop-blur-sm hidden z-50 flex items-center justify-center p-6">
+        <div class="bg-white/90 backdrop-blur-xl w-full max-w-xs rounded-[28px] p-8 shadow-2xl text-center animate-island-pop">
+            <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 text-xl"><i id="modal-icon" class="fa-solid fa-trash-can"></i></div>
+            <h3 id="modal-confirm-title" class="font-bold text-lg mb-1">Are you sure?</h3><p id="delete-confirmation-text" class="text-xs text-gray-400 mb-6">This action cannot be undone.</p>
+            <div class="grid grid-cols-2 gap-3"><button onclick="closeDeleteModal()" class="py-3 bg-gray-100 rounded-xl font-bold text-xs text-gray-600">Cancel</button><button onclick="executeDelete()" id="btn-confirm-action" class="py-3 bg-red-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-500/20">Delete</button></div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+        Chart.register(ChartDataLabels);
+
+        const supabaseUrl = 'https://fdcxgskqdiqefdqrhaxl.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkY3hnc2txZGlxZWZkcXJoYXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MjAzMzUsImV4cCI6MjA5NTA5NjMzNX0.Eaw1PQyh9mltLpCLv1vdUEUHbHmfyX8uii9azRBmqIc';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        let currentUser = null, allReports = [], allUsers = [], chartAnnual = null, chartMonthly = null;
+        let pendingAction = null, targetId = null, currentAdminCode = "123456";
+        const ROW_LABELS = ['REG', 'ECO', 'ND', 'SD/SDS', 'BIG'];
+        let reportsChannel = null, usersChannel = null;
+        let currentDashType = 'delivery'; 
+        
+        // --- SLA CONFIG (Default Values) ---
+        let currentSLAConfig = {
+            delivery: { green: 96.3, orange: 95.0 },
+            pickup: { green: 95.0, orange: 93.0 }
+        };
+
+        // --- CUSTOM MULTI SELECT LOGIC ---
+        window.toggleMultiSelect = (id) => {
+            const dropdown = document.getElementById(id);
+            dropdown.classList.toggle('show');
+            // Close others
+            document.querySelectorAll('.multi-select-dropdown').forEach(d => { if(d.id !== id) d.classList.remove('show'); });
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.multi-select-dropdown') && !e.target.closest('button[onclick^="toggleMultiSelect"]')) {
+                document.querySelectorAll('.multi-select-dropdown').forEach(d => d.classList.remove('show'));
+            }
+        });
+
+        window.handleMultiSelect = (type, forcedVal) => {
+            const container = document.getElementById(`dropdown-${type}`);
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            const allCb = document.getElementById(`chk-${type}-all`);
+            const labelEl = document.getElementById(`label-${type}`);
+            
+            if (forcedVal === 'all') {
+                if (allCb.checked) {
+                    checkboxes.forEach(cb => { if(cb !== allCb) cb.checked = false; });
+                } else {
+                    allCb.checked = true; // prevent unchecking all
+                }
+            } else {
+                if (allCb.checked) allCb.checked = false;
+                const anyChecked = Array.from(checkboxes).some(cb => cb !== allCb && cb.checked);
+                if (!anyChecked) allCb.checked = true;
+            }
+
+            // Update Label
+            const selected = Array.from(checkboxes).filter(cb => cb.checked && cb.value !== 'all').map(cb => cb.value);
+            if (allCb.checked || selected.length === 0) {
+                labelEl.textContent = type === 'ss' ? 'Semua SS' : 'All Service';
+            } else {
+                labelEl.textContent = selected.length + ' Selected';
+            }
+            
+            renderDashboard();
+        }
+
+        window.getMultiSelectValues = (type) => {
+            const container = document.getElementById(`dropdown-${type}`);
+            if(!container) return ['all'];
+            const allCb = document.getElementById(`chk-${type}-all`);
+            if (allCb && allCb.checked) return ['all'];
+            
+            const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value).filter(v => v !== 'all');
+            return selected.length > 0 ? selected : ['all'];
+        }
+
+        // --- DYNAMIC ISLAND NOTIFICATION LOGIC ---
+        let islandTimeout;
+        function showNotification(msg, type='success') {
+            const island = document.getElementById('dynamic-island');
+            const iconEl = document.getElementById('island-icon');
+            const titleEl = document.getElementById('island-title');
+            const msgEl = document.getElementById('island-msg');
+
+            // Reset current state
+            clearTimeout(islandTimeout);
+            island.classList.remove('active', 'idle');
+            void island.offsetWidth; // Trigger reflow
+
+            // Set Content
+            if(type === 'success') {
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+                titleEl.textContent = 'Success';
+            } else {
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+                titleEl.textContent = 'Error';
+            }
+            msgEl.textContent = msg;
+
+            // Animate In
+            island.classList.add('active');
+
+            // Auto Hide
+            islandTimeout = setTimeout(() => {
+                island.classList.remove('active');
+                island.classList.add('idle');
+            }, 3000);
+        }
+        window.showNotification = showNotification;
+
+        window.switchLoginTab = (type) => {
+            document.getElementById('login-type').value = type;
+            const uInput = document.getElementById('username-container');
+            const btnUser = document.getElementById('tab-login-user');
+            const btnAdmin = document.getElementById('tab-login-admin');
+            
+            if(type==='admin') {
+                btnAdmin.className = "py-2 text-xs font-bold rounded-[10px] transition-all shadow-sm bg-white text-[#1D1D1F]";
+                btnUser.className = "py-2 text-xs font-bold rounded-[10px] transition-all text-gray-500 hover:text-gray-700";
+                uInput.classList.add('hidden'); document.getElementById('username').value='admin';
+            } else {
+                btnUser.className = "py-2 text-xs font-bold rounded-[10px] transition-all shadow-sm bg-white text-[#1D1D1F]";
+                btnAdmin.className = "py-2 text-xs font-bold rounded-[10px] transition-all text-gray-500 hover:text-gray-700";
+                uInput.classList.remove('hidden'); if(document.getElementById('username').value==='admin') document.getElementById('username').value='';
+            }
+        }
+
+        function showGlobalLoader(show, text="Loading...") {
+            const el = document.getElementById('global-loader');
+            const txt = document.getElementById('loader-text');
+            if(show) { txt.textContent = text; el.classList.remove('hidden'); } else { el.classList.add('hidden'); }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('login-type').value;
+            const u = document.getElementById('username').value.trim().toLowerCase();
+            const p = document.getElementById('password').value.trim();
+            const errEl = document.getElementById('login-error');
+            
+            showGlobalLoader(true, "Authenticating...");
+
+            try {
+                const { data: users, error } = await supabase.from('users').select('*').eq('username', u);
+                
+                let success = false;
+                if(users && users.length > 0) {
+                    const data = users[0];
+                    if(data.password !== p) throw new Error("Password invalid.");
+                    if(data.status === 'inactive') throw new Error("Account inactive.");
+                    if(type === 'admin' && u !== 'admin') throw new Error("Not an admin account.");
+                    if(type === 'user' && u === 'admin') throw new Error("Use Admin tab.");
+                    currentUser = data;
+                    success = true;
+                } else {
+                    if(type==='admin' && u==='admin' && p==='TAB123') {
+                        const { data: admins } = await supabase.from('users').select('*').eq('role', 'coordinator');
+                        if (!admins || admins.length === 0) {
+                            const newAdm = {name:"Super Admin", username:"admin", password:"TAB123", role:"coordinator", status:"active", created_at: new Date().toISOString()};
+                            const { data: insertedData, error: insErr } = await supabase.from('users').insert(newAdm).select();
+                            if(insErr) throw new Error("Failed to create admin");
+                            currentUser = insertedData[0];
+                            success = true;
+                        } else throw new Error("User not found.");
+                    } else throw new Error("User not found.");
+                }
+
+                if(success) {
+                    setTimeout(() => { showGlobalLoader(false); finishLogin(); showNotification(`Welcome, ${currentUser.name}!`); }, 800);
+                }
+
+            } catch(err) {
+                showGlobalLoader(false);
+                errEl.querySelector('span').textContent = err.message;
+                errEl.classList.remove('hidden');
+                showNotification(err.message, "error");
+            }
+        });
+
+        function finishLogin() {
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('user-display-name').textContent = currentUser.name;
+            document.getElementById('user-display-role').textContent = currentUser.role;
+
+            const navSettings = document.getElementById('nav-settings');
+            const mobNavSettings = document.getElementById('mobile-nav-settings');
+            const btnAddReport = document.getElementById('btn-add-report');
+
+            if(currentUser.role === 'coordinator') {
+                navSettings.classList.remove('hidden');
+                mobNavSettings.classList.remove('hidden');
+            } else {
+                navSettings.classList.add('hidden');
+                mobNavSettings.classList.add('hidden');
+            }
+
+            if(currentUser.role === 'visitor') btnAddReport.classList.add('hidden');
+            else btnAddReport.classList.remove('hidden');
+            
+            fetchGlobalSettings(); listenToReports();
+            if(currentUser.role === 'coordinator') listenToUsers();
+            setupReportForm(); setupDashboardFilters(); renderInputTable(); window.showTab('dashboard');
+        }
+
+        async function logout() {
+            try {
+                if(reportsChannel) supabase.removeChannel(reportsChannel); if(usersChannel) supabase.removeChannel(usersChannel);
+                currentUser = null; allReports = []; allUsers = [];
+                document.getElementById('main-app').classList.add('hidden');
+                document.getElementById('login-page').classList.remove('hidden');
+                document.getElementById('login-form').reset(); document.getElementById('login-error').classList.add('hidden');
+                switchLoginTab('user');
+            } catch (error) { window.location.reload(); }
+        }
+        window.logout = logout;
+
+        window.openConfirmLogout = () => {
+            targetId = null;
+            pendingAction = 'logout';
+            document.getElementById('modal-confirm-title').textContent = "Konfirmasi Logout";
+            document.getElementById('delete-confirmation-text').textContent = "Apakah Anda yakin ingin keluar?";
+            document.getElementById('btn-confirm-action').textContent = "Ya, Keluar";
+            document.getElementById('btn-confirm-action').className = "py-3 bg-red-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-500/20";
+            document.getElementById('modal-icon').className = "fa-solid fa-arrow-right-from-bracket";
+            document.getElementById('modal-confirm-delete').classList.remove('hidden');
+        }
+
+        async function fetchGlobalSettings() {
+            if(!currentUser) return;
+            const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
+            if(data) {
+                currentAdminCode = data.adminCode || "123456";
+                if(data.slaConfig) currentSLAConfig = data.slaConfig;
+                
+                const inp = document.getElementById('setting-admin-code'); if(inp) inp.value = currentAdminCode;
+                // Populate Inputs
+                document.getElementById('sla-del-green').value = currentSLAConfig.delivery.green;
+                document.getElementById('sla-del-orange').value = currentSLAConfig.delivery.orange;
+                document.getElementById('sla-pick-green').value = currentSLAConfig.pickup.green;
+                document.getElementById('sla-pick-orange').value = currentSLAConfig.pickup.orange;
+            } else { 
+                await supabase.from('settings').insert({
+                    id: 1,
+                    adminCode: "123456", 
+                    slaConfig: currentSLAConfig
+                }); 
+            }
+        }
+        window.saveGlobalSettings = async () => {
+            const code = document.getElementById('setting-admin-code').value.trim();
+            const dg = parseFloat(document.getElementById('sla-del-green').value);
+            const do_val = parseFloat(document.getElementById('sla-del-orange').value);
+            const pg = parseFloat(document.getElementById('sla-pick-green').value);
+            const po = parseFloat(document.getElementById('sla-pick-orange').value);
+
+            if(!code) return showNotification("Kode kosong", "error");
+            if(isNaN(dg) || isNaN(do_val) || isNaN(pg) || isNaN(po)) return showNotification("SLA Values Invalid", "error");
+
+            const newSLAConfig = {
+                delivery: { green: dg, orange: do_val },
+                pickup: { green: pg, orange: po }
+            };
+
+            await supabase.from('settings').upsert({
+                id: 1,
+                adminCode: code,
+                slaConfig: newSLAConfig
+            });
+            
+            currentAdminCode = code;
+            currentSLAConfig = newSLAConfig;
+            
+            showNotification("Settings Saved!");
+            renderDashboard(); // Re-render to reflect new colors immediately
+        }
+
+        function getLast30Days() {
+            const end = new Date(); const start = new Date(); start.setDate(end.getDate() - 30);
+            return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+        }
+
+        window.setDashType = (type) => {
+            currentDashType = type;
+            const btnDel = document.getElementById('dash-toggle-delivery');
+            const btnPick = document.getElementById('dash-toggle-pickup');
+            
+            if(type === 'delivery') { btnDel.classList.add('active'); btnPick.classList.remove('active'); } 
+            else { btnPick.classList.add('active'); btnDel.classList.remove('active'); }
+            renderDashboard();
+        }
+
+        function setupDashboardFilters() {
+            // Setup SS Options
+            const ssSet = new Set(allReports.map(r => r.kodeSS).filter(Boolean));
+            const ssContainer = document.getElementById('dropdown-ss');
+            if(ssContainer) {
+                let html = `<div class="checkbox-item"><input type="checkbox" value="all" checked id="chk-ss-all" onchange="handleMultiSelect('ss', 'all')"><label for="chk-ss-all">Semua SS</label></div>`;
+                [...ssSet].sort().forEach(ss => {
+                    html += `<div class="checkbox-item"><input type="checkbox" value="${ss}" class="chk-ss-opt" onchange="handleMultiSelect('ss')"><label>${ss}</label></div>`;
+                });
+                ssContainer.innerHTML = html;
+            }
+
+            const { start, end } = getLast30Days();
+            const startIn = document.getElementById('dash-date-start');
+            const endIn = document.getElementById('dash-date-end');
+            if(startIn && !startIn.value) startIn.value = start;
+            if(endIn && !endIn.value) endIn.value = end;
+
+            const histSS = document.getElementById('filter-user');
+            if(histSS) {
+                 const cur = histSS.value;
+                 histSS.innerHTML = '<option value="all">Semua SS</option>' + [...ssSet].map(ss => `<option value="${ss}">${ss}</option>`).join('');
+                 if([...ssSet].includes(cur)) histSS.value = cur;
+                 histSS.addEventListener('render', renderReportsTable);
+            }
+            const histStart = document.getElementById('hist-date-start');
+            const histEnd = document.getElementById('hist-date-end');
+            if(histStart && !histStart.value) histStart.value = start;
+            if(histEnd && !histEnd.value) histEnd.value = end;
+            
+            if(histStart) histStart.addEventListener('change', renderReportsTable);
+            if(histEnd) histEnd.addEventListener('change', renderReportsTable);
+            if(histSS) histSS.addEventListener('change', renderReportsTable);
+
+            ['dash-date-start', 'dash-date-end'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.addEventListener('change', renderDashboard);
+            });
+        }
+
+        window.resetFilters = () => {
+            const { start, end } = getLast30Days();
+            document.getElementById('dash-date-start').value = start;
+            document.getElementById('dash-date-end').value = end;
+            
+            // Reset Custom Multi Selects
+            handleMultiSelect('ss', 'all');
+            handleMultiSelect('svc', 'all');
+            
+            setDashType('delivery');
+        }
+
+        function renderDashboard() {
+            if(!document.getElementById('dash-date-start')) return;
+            const start = document.getElementById('dash-date-start').value;
+            const end = document.getElementById('dash-date-end').value;
+            
+            const selectedSS = getMultiSelectValues('ss');
+            const selectedSvc = getMultiSelectValues('svc');
+
+            const filteredByDate = allReports.filter(r => {
+                let rDate = r.date || (r.timestamp ? new Date(r.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+                const inDate = (!start || rDate >= start) && (!end || rDate <= end);
+                
+                const inSS = selectedSS.includes('all') || selectedSS.includes(r.kodeSS);
+                const inType = r.type === currentDashType;
+                
+                // For Service, check if ANY detail matches ANY selected service
+                const inSvc = selectedSvc.includes('all') || r.details.some(d => selectedSvc.includes(d.label) && d.total > 0);
+                
+                return inDate && inSS && inType && inSvc;
+            });
+            
+            const filteredForAnnual = allReports.filter(r => {
+                const inSS = selectedSS.includes('all') || selectedSS.includes(r.kodeSS);
+                const inType = r.type === currentDashType;
+                const inSvc = selectedSvc.includes('all') || r.details.some(d => selectedSvc.includes(d.label) && d.total > 0);
+                return inSS && inType && inSvc;
+            });
+
+            updateKPIs(filteredByDate, currentDashType, selectedSvc);
+            processCharts(filteredByDate, filteredForAnnual, selectedSvc, start, end); 
+            processBreakdowns(filteredByDate, selectedSvc, currentDashType); 
+            processFeedback(filteredByDate, selectedSvc);
+        }
+
+        function updateKPIs(data, filterType, filterSvc) {
+            let total = 0, ok = 0, prog = 0, mbh = 0, miss = 0, claim = 0;
+            data.forEach(r => {
+                r.details?.forEach(d => {
+                    if (!filterSvc.includes('all') && !filterSvc.includes(d.label)) return;
+                    total += d.total; ok += d.ok; prog += d.inprogress; mbh += d.mbh; miss += d.missed; claim += d.claimed;
+                });
+            });
+            const pct = total > 0 ? (ok/total*100).toFixed(1) : 0;
+            
+            document.getElementById('kpi-val-total').textContent = total.toLocaleString('id-ID');
+            document.getElementById('kpi-val-ok').textContent = ok.toLocaleString('id-ID');
+            const badge = document.getElementById('kpi-badge-ok');
+            badge.textContent = pct.toLocaleString('id-ID') + '%';
+            
+            // Dynamic Color Logic for Badge
+            const colorClass = getSLAColor(pct, filterType);
+            badge.className = `text-[10px] font-bold text-white px-2 py-0.5 rounded-full transition-colors duration-300 ${colorClass}`;
+
+            document.getElementById('kpi-val-prog').textContent = prog.toLocaleString('id-ID');
+            document.getElementById('kpi-val-mbh').textContent = mbh.toLocaleString('id-ID');
+            document.getElementById('kpi-val-miss').textContent = miss.toLocaleString('id-ID');
+            document.getElementById('kpi-val-claim').textContent = claim.toLocaleString('id-ID');
+            document.getElementById('kpi-card-claim').style.display = (filterType === 'pickup') ? 'none' : 'flex';
+        }
+
+        function processCharts(dataByDate, dataAnnual, filterSvc, startDate, endDate) {
+            const chartAnnualCanvas = document.getElementById('chartAnnual');
+            const chartMonthlyCanvas = document.getElementById('chartMonthly');
+            if(!chartAnnualCanvas || !chartMonthlyCanvas) return;
+
+            const months = {};
+            for(let i=0; i<12; i++) { 
+                const m = new Date(new Date().getFullYear(), i, 1).toLocaleString('id-ID',{month:'short'}); 
+                months[m] = {total:0, ok:0}; 
+            }
+            dataAnnual.forEach(r => {
+                const dateVal = r.date ? new Date(r.date) : (r.timestamp ? new Date(r.timestamp) : new Date());
+                if(dateVal.getFullYear() === new Date().getFullYear()) {
+                     const m = dateVal.toLocaleString('id-ID',{month:'short'});
+                     let rTotal = 0, rOK = 0; 
+                     r.details?.forEach(d => { 
+                         if (!filterSvc.includes('all') && !filterSvc.includes(d.label)) return;
+                         rTotal+=d.total; rOK+=d.ok; 
+                     });
+                     if(months[m]) { months[m].total+=rTotal; months[m].ok+=rOK; }
+                }
+            });
+            const keysM = Object.keys(months);
+            const datM_Vol = keysM.map(k=>months[k].total);
+            const datM_SLA = keysM.map(k=> months[k].total>0 ? ((months[k].ok/months[k].total)*100).toFixed(1) : 0);
+
+            if(chartAnnual) chartAnnual.destroy();
+            chartAnnual = new Chart(chartAnnualCanvas, {
+                type: 'bar',
+                data: { labels: keysM, datasets: [{ type:'bar', label:'Vol', data:datM_Vol, backgroundColor:'#007AFF', borderRadius:6, order:2 }, { type:'line', label:'% SLA', data:datM_SLA, borderColor:'#FF9500', borderWidth:3, tension:0.4, pointRadius:0, pointHoverRadius:4, yAxisID:'y1', order:1 }] },
+                options: { 
+                    layout: { padding: { top: 20 } }, responsive:true, maintainAspectRatio:false, 
+                    plugins:{ 
+                        legend:{display:false},
+                        datalabels: {
+                            color: (c) => c.dataset.type === 'line' ? '#FF9500' : '#1D1D1F', 
+                            anchor: (c) => c.dataset.type === 'line' ? 'start' : 'end',
+                            align: 'top', offset: 0, font: { weight: 'bold', size: 10 },
+                            formatter: (v) => v > 0 ? v.toLocaleString('id-ID') : ''
+                        }
+                    }, 
+                    scales:{ y:{display:false}, y1:{display:false, min:0, max:100}, x:{grid:{display:false}} } 
+                }
+            });
+
+            // FIX: Use UTC to generate axis labels to match YYYY-MM-DD strings exactly
+            const days = {};
+            // Parse inputs as UTC midnight
+            const sDate = new Date(startDate); 
+            const eDate = new Date(endDate);
+            
+            // Loop adds 1 day in UTC
+            for(let d = new Date(sDate); d <= eDate; d.setUTCDate(d.getUTCDate() + 1)) {
+                const k = d.toISOString().split('T')[0];
+                // Label using UTC date/month
+                const label = d.getUTCDate() + '/' + (d.getUTCMonth()+1);
+                days[k] = { label: label, total:0, ok:0 };
+            }
+
+            dataByDate.forEach(r => { 
+                const dateStr = r.date || (r.timestamp ? new Date(r.timestamp).toISOString().split('T')[0] : '');
+                if(days[dateStr]) { 
+                    r.details?.forEach(d => { 
+                        if (!filterSvc.includes('all') && !filterSvc.includes(d.label)) return;
+                        days[dateStr].total+=d.total; days[dateStr].ok+=d.ok; 
+                    }); 
+                } 
+            });
+            const sortedKeys = Object.keys(days).sort();
+            const lblD = sortedKeys.map(k=>days[k].label);
+            const datD_Vol = sortedKeys.map(k=>days[k].total);
+            const datD_SLA = sortedKeys.map(k=> days[k].total>0 ? ((days[k].ok/days[k].total)*100).toFixed(1) : 0);
+
+            if(chartMonthly) chartMonthly.destroy();
+            chartMonthly = new Chart(chartMonthlyCanvas, {
+                type: 'bar',
+                data: { labels: lblD, datasets: [{ type:'bar', label:'Vol', data:datD_Vol, backgroundColor:'#34C759', borderRadius:4, order:2 }, { type:'line', label:'% SLA', data:datD_SLA, borderColor:'#007AFF', borderWidth:3, tension:0.4, pointRadius:0, pointHoverRadius:4, yAxisID:'y1', order:1 }] },
+                options: { 
+                    layout: { padding: { top: 20 } }, responsive:true, maintainAspectRatio:false, 
+                    plugins:{ 
+                        legend:{display:false},
+                        datalabels: {
+                            color: (c) => c.dataset.type === 'line' ? '#007AFF' : '#1D1D1F', 
+                            anchor: (c) => c.dataset.type === 'line' ? 'start' : 'end',
+                            align: 'top', offset: 0, font: { weight: 'bold', size: 9 },
+                            formatter: (v) => v > 0 ? v.toLocaleString('id-ID') : ''
+                        }
+                    }, 
+                    scales:{ y:{display:false}, y1:{display:false, min:0, max:100}, x:{grid:{display:false}} } 
+                }
+            });
+        }
+
+        function processBreakdowns(data, filterSvc, filterType) {
+            const byService = {}, byStaging = {};
+            data.forEach(r => {
+                const type = r.type; 
+                r.details?.forEach(d => {
+                    if (!filterSvc.includes('all') && !filterSvc.includes(d.label)) return;
+                    if(!byService[d.label]) byService[d.label] = { total:0, ok:0, inp:0, mbh:0, miss:0, claim:0, type: type };
+                    else if(byService[d.label].type !== type) byService[d.label].type = 'mixed';
+                    const s = byService[d.label]; s.total+=d.total; s.ok+=d.ok; s.inp+=d.inprogress; s.mbh+=d.mbh; s.miss+=d.missed; s.claim+=d.claimed;
+                    
+                    const key = `${r.kodeSS} - ${r.reporterName}`;
+                    if(!byStaging[key]) byStaging[key] = { name:key, total:0, ok:0, inp:0, mbh:0, miss:0, claim:0, type: type, ss: r.kodeSS, pic: r.reporterName };
+                    else if(byStaging[key].type !== type) byStaging[key].type = 'mixed';
+                    const ss = byStaging[key]; ss.total+=d.total; ss.ok+=d.ok; ss.inp+=d.inprogress; ss.mbh+=d.mbh; ss.miss+=d.missed; ss.claim+=d.claimed;
+                });
+            });
+
+            const showClaim = filterType !== 'pickup';
+            document.querySelectorAll('.claim-col').forEach(el => el.style.display = showClaim ? 'table-cell' : 'none');
+
+            const renderRow = (label, d, isStaging = false) => {
+                const sla = d.total > 0 ? (d.ok / d.total * 100) : 0;
+                const slaColor = getSLAColor(sla, d.type);
+                let labelHTML = label;
+                if(isStaging) {
+                    const threshold = (d.type === 'pickup') ? currentSLAConfig.pickup.green : currentSLAConfig.delivery.green;
+                    const isRed = (sla < threshold);
+                    labelHTML = `<div class="flex flex-col"><div class="flex items-center gap-2"><span class="font-bold text-[#1D1D1F] text-sm tracking-tight">${d.ss}</span>${isRed ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-[10px] animate-pulse"></i>' : ''}</div><span class="text-[10px] text-gray-400 font-medium uppercase">${d.pic}</span></div>`;
+                }
+
+                return `<tr class="hover:bg-gray-50 border-b border-gray-100 last:border-0 h-12 transition-colors">
+                    <td class="p-3 pl-5 font-bold text-gray-700 align-middle">${labelHTML}</td>
+                    <td class="p-3 text-right font-bold text-[#1D1D1F] align-middle">${d.total.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right font-medium text-gray-600 align-middle">${d.ok.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-center align-middle"><div class="${slaColor} text-[10px] text-white font-bold px-2 py-0.5 rounded-md inline-block shadow-sm">${sla.toLocaleString('id-ID', {maximumFractionDigits:1})}%</div></td>
+                    <td class="p-3 text-right text-gray-400 align-middle">${d.inp.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right text-orange-500 align-middle">${d.mbh.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right text-red-500 font-bold align-middle">${d.miss.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right pr-5 text-purple-600 font-medium ${showClaim?'':'hidden'} align-middle">${d.claim.toLocaleString('id-ID')}</td>
+                </tr>`;
+            };
+
+            const renderFooter = (list) => {
+                let t=0, o=0, i=0, mb=0, m=0, c=0;
+                list.forEach(x => { t+=x.total; o+=x.ok; i+=x.inp; mb+=x.mbh; m+=x.miss; c+=x.claim; });
+                const avgPct = t > 0 ? (o / t * 100) : 0;
+                const avgColor = getSLAColor(avgPct, filterType);
+
+                return `<tr class="bg-blue-50 font-bold text-[#1D1D1F] border-t-2 border-blue-200">
+                    <td class="p-3 pl-5 text-blue-900">TOTAL</td>
+                    <td class="p-3 text-right text-blue-900">${t.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right text-blue-900">${o.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-center"><div class="${avgColor} text-[10px] text-white font-bold px-2 py-0.5 rounded-md inline-block shadow-sm">${avgPct.toLocaleString('id-ID', {maximumFractionDigits:1})}%</div></td>
+                    <td class="p-3 text-right text-blue-900">${i.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right text-blue-900">${mb.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right text-red-600">${m.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right pr-5 ${showClaim?'':'hidden'} text-blue-900">${c.toLocaleString('id-ID')}</td>
+                </tr>`;
+            }
+
+            const listSvc = Object.entries(byService).map(([k,v]) => ({label:k, ...v})).sort((a,b)=>b.total - a.total);
+            const elSvc = document.getElementById('body-breakdown-service');
+            if (elSvc) {
+                elSvc.innerHTML = listSvc.map(item => renderRow(item.label, item, false)).join('') + renderFooter(listSvc);
+            }
+
+            const listStg = Object.values(byStaging).sort((a,b)=>b.total - a.total);
+            const elStg = document.getElementById('body-breakdown-staging');
+            if (elStg) {
+                elStg.innerHTML = listStg.map(item => renderRow(item.name, item, true)).join('') + renderFooter(listStg);
+            }
+        }
+
+        // --- DYNAMIC SLA COLOR LOGIC ---
+        function getSLAColor(pct, type) {
+            // Get config based on type (delivery/pickup)
+            const config = (type === 'pickup') ? currentSLAConfig.pickup : currentSLAConfig.delivery;
+            
+            if (pct >= config.green) return 'bg-[#34C759]'; // Green
+            else if (pct >= config.orange) return 'bg-[#FF9500]'; // Orange/Warning
+            return 'bg-[#FF3B30]'; // Red
+        }
+
+        function processFeedback(data, filterSvc) {
+            const feedInt = {}; const feedExt = {}; 
+            let totInt = 0, totExt = 0;
+            
+            data.forEach(r => { 
+                r.details?.forEach(d => {
+                    if (!filterSvc.includes('all') && !filterSvc.includes(d.label)) return;
+                    if(d.total_int > 0) totInt += d.total_int;
+                    if(d.feed_int && d.feed_int.trim() !== '-' && d.feed_int.trim() !== '') { 
+                        const t = d.feed_int.trim();
+                        feedInt[t.toLowerCase()] = { text: t, count: (feedInt[t.toLowerCase()]?.count || 0) + d.total_int };
+                    }
+                    if(d.total_ext > 0) totExt += d.total_ext;
+                    if(d.feed_ext && d.feed_ext.trim() !== '-' && d.feed_ext.trim() !== '') { 
+                        const t = d.feed_ext.trim();
+                        feedExt[t.toLowerCase()] = { text: t, count: (feedExt[t.toLowerCase()]?.count || 0) + d.total_ext };
+                    }
+                });
+            });
+            
+            document.getElementById('feedback-total-int').textContent = totInt;
+            document.getElementById('feedback-total-ext').textContent = totExt;
+            
+            const render = (obj) => Object.values(obj).map(item => `
+                <li class="flex justify-between items-start pb-2 border-b border-gray-100 last:border-0 hover:bg-white/50 p-1 rounded transition-colors">
+                    <span class="text-gray-700 text-xs mr-2 leading-tight flex-1">${item.text}</span>
+                    <span class="font-mono text-[10px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded-full shadow-sm shrink-0">${item.count}</span>
+                </li>
+            `).join('') || '<li class="text-gray-400 italic text-xs p-2">No feedback</li>';
+            
+            document.getElementById('feedback-list-int').innerHTML = render(feedInt);
+            document.getElementById('feedback-list-ext').innerHTML = render(feedExt);
+        }
+
+        function setupReportForm() {
+            document.getElementById('input-date').valueAsDate = new Date();
+            const isCoord = currentUser.role === 'coordinator';
+            document.getElementById('admin-user-select-container').classList.toggle('hidden', !isCoord);
+            document.getElementById('input-pic-name').readOnly = !isCoord; 
+            
+            if(isCoord) populateAdminUserSelect();
+            else {
+                document.getElementById('input-pic-name').value = currentUser.name;
+                document.getElementById('input-pic-id').value = currentUser.id;
+                document.getElementById('input-kode-ss').value = currentUser.kodeSS || '-';
+            }
+        }
+        function populateAdminUserSelect() {
+            const sel = document.getElementById('input-admin-select-user');
+            sel.innerHTML = '<option value="">-- Pilih User --</option>';
+            allUsers.filter(u=>u.username!=='admin' && u.status!=='inactive').forEach(u => sel.innerHTML += `<option value="${u.id}">${u.name} (${u.kodeSS||'-'})</option>`);
+        }
+        window.updateReporterInfo = () => {
+            const uid = document.getElementById('input-admin-select-user').value;
+            if(!uid) return;
+            const u = allUsers.find(x=>x.id===uid);
+            document.getElementById('input-pic-name').value = u.name;
+            document.getElementById('input-kode-ss').value = u.kodeSS || '-';
+            document.getElementById('input-pic-id').value = u.id;
+        }
+
+        window.toggleReportForm = (show) => {
+            if(show) {
+                document.getElementById('view-reports-list').classList.add('hidden');
+                document.getElementById('view-reports-form').classList.remove('hidden');
+                renderInputTable();
+            } else {
+                document.getElementById('view-reports-form').classList.add('hidden');
+                document.getElementById('view-reports-list').classList.remove('hidden');
+            }
+        }
+
+        window.selectReportType = (type) => {
+            document.getElementById('input-type').value = type;
+            const btnDel = document.getElementById('btn-type-delivery');
+            const btnPick = document.getElementById('btn-type-pickup');
+            
+            if(type === 'delivery') {
+                btnDel.classList.remove('text-gray-500'); btnDel.classList.add('bg-white', 'text-[#007AFF]', 'shadow-sm'); 
+                btnPick.classList.add('text-gray-500'); btnPick.classList.remove('bg-white', 'text-[#FF9500]', 'shadow-sm');
+            } else {
+                btnPick.classList.remove('text-gray-500'); btnPick.classList.add('bg-white', 'text-[#FF9500]', 'shadow-sm'); 
+                btnDel.classList.add('text-gray-500'); btnDel.classList.remove('bg-white', 'text-[#007AFF]', 'shadow-sm');
+            }
+            renderInputTable();
+        }
+
+        window.formatNumberInput = (input) => {
+            let val = input.value.replace(/\D/g, ''); 
+            if (val) val = parseInt(val, 10).toLocaleString('id-ID'); 
+            input.value = val;
+        }
+
+        window.renderInputTable = () => {
+            const isDel = document.getElementById('input-type').value === 'delivery';
+            let head = `<tr>
+                <th class="p-3 border-b border-gray-200 w-24 text-xs font-bold text-gray-500 uppercase">Service</th>
+                <th class="p-3 border-b border-gray-200 bg-blue-50/50 text-blue-600 w-20 text-xs font-bold uppercase text-center">Total</th>
+                <th class="p-3 border-b border-gray-200 w-20 text-xs font-bold text-gray-500 uppercase text-center">OK</th>
+                <th class="p-3 border-b border-gray-200 text-xs text-gray-400 w-20 text-center">Prog</th>
+                <th class="p-3 border-b border-gray-200 text-xs text-gray-400 w-20 text-center">MBH</th>
+                <th class="p-3 border-b border-gray-200 text-xs text-red-400 w-20 text-center">Miss</th>
+                ${isDel?'<th class="p-3 border-b border-gray-200 text-xs text-purple-400 w-20 text-center">Claim</th>':''}
+                <th class="p-3 border-b border-gray-200 border-l border-gray-300 pl-2 text-xs text-blue-500 w-20 text-center">Int Vol</th>
+                <th class="p-3 border-b border-gray-200 text-xs text-blue-500 w-auto">Int Note</th>
+                <th class="p-3 border-b border-gray-200 text-xs text-orange-500 w-20 text-center">Ext Vol</th>
+                <th class="p-3 border-b border-gray-200 text-xs text-orange-500 w-auto">Ext Note</th>
+            </tr>`;
+            document.getElementById('table-header').innerHTML = head;
+            let body = '';
+            ROW_LABELS.forEach((lbl, i) => {
+                const rid = `row-${i}`;
+                body += `<tr data-label="${lbl}" class="border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors">
+                    <td class="p-2 font-bold text-gray-600 text-xs">${lbl}</td>
+                    <td class="p-2 total-cell input-cell w-20"><input type="text" id="${rid}-total" readonly value="0"></td>
+                    <td class="p-2 input-cell w-20"><input type="text" class="sla-input" data-row="${rid}" oninput="formatNumberInput(this); calcRow('${rid}')"></td>
+                    <td class="p-2 input-cell w-20"><input type="text" class="sla-input" data-row="${rid}" oninput="formatNumberInput(this); calcRow('${rid}')"></td>
+                    <td class="p-2 input-cell w-20"><input type="text" class="sla-input" data-row="${rid}" oninput="formatNumberInput(this); calcRow('${rid}')"></td>
+                    <td class="p-2 input-cell w-20"><input type="text" class="sla-input" data-row="${rid}" oninput="formatNumberInput(this); calcRow('${rid}')"></td>
+                    ${isDel ? `<td class="p-2 input-cell w-20"><input type="text" class="sla-input" data-row="${rid}" oninput="formatNumberInput(this); calcRow('${rid}')"></td>` : ''}
+                    <td class="p-2 input-cell w-20 border-l pl-2"><input type="text" oninput="formatNumberInput(this)"></td>
+                    <td class="p-2 w-auto"><input type="text" class="w-full text-xs bg-transparent border-b border-gray-200 outline-none text-gray-600 focus:border-blue-500 transition-colors"></td>
+                    <td class="p-2 input-cell w-20"><input type="text" oninput="formatNumberInput(this)"></td>
+                    <td class="p-2 w-auto"><input type="text" class="w-full text-xs bg-transparent border-b border-gray-200 outline-none text-gray-600 focus:border-orange-500 transition-colors"></td>
+                </tr>`;
+            });
+            document.getElementById('table-body').innerHTML = body;
+        }
+
+        window.calcRow = (rid) => {
+            let tot = 0;
+            document.querySelectorAll(`input.sla-input[data-row="${rid}"]`).forEach(i => {
+                const val = parseInt(i.value.replace(/\./g, '')) || 0;
+                tot += val;
+            });
+            document.getElementById(`${rid}-total`).value = tot.toLocaleString('id-ID');
+        }
+
+        document.getElementById('report-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-report');
+            const editId = document.getElementById('report-id-hidden').value;
+            const date = document.getElementById('input-date').value;
+            const type = document.getElementById('input-type').value;
+            const picId = document.getElementById('input-pic-id').value;
+            const picName = document.getElementById('input-pic-name').value;
+            const kodeSS = document.getElementById('input-kode-ss').value;
+
+            if(!picId || !date) return showNotification("Missing Info", "error");
+            if(!editId) {
+                const qDup = query(collection(db,'artifacts', appId, 'public', 'data', 'reports'), where('reporterId','==',picId), where('date','==',date), where('type','==',type));
+                const dupSnap = await getDocs(qDup);
+                if(!dupSnap.empty) return showNotification("Laporan sudah ada!", "error");
+            }
+            
+            let gTotal = 0; const details = [];
+            document.querySelectorAll('#table-body tr').forEach(tr => {
+                const inps = tr.querySelectorAll('input'); const isDel = type === 'delivery';
+                const getVal = (idx) => parseInt(inps[idx]?.value.replace(/\./g, '')||0);
+                const getStr = (idx) => inps[idx]?.value || '';
+                const tot = getVal(0); gTotal += tot;
+                details.push({
+                    label: tr.getAttribute('data-label'), total: tot, ok: getVal(1), inprogress: getVal(2), mbh: getVal(3), missed: getVal(4), claimed: isDel ? getVal(5) : 0,
+                    total_int: isDel ? getVal(6) : getVal(5), feed_int: isDel ? getStr(7) : getStr(6),
+                    total_ext: isDel ? getVal(8) : getVal(7), feed_ext: isDel ? getStr(9) : getStr(8)
+                });
+            });
+
+            if (gTotal === 0) return showNotification("Total must be > 0", "error");
+            
+            btn.disabled = true; showGlobalLoader(true, "Saving Report...");
+            try {
+                const payload = { date, type, reporterName: picName, reporterId: picId, kodeSS, grandTotalVolume: gTotal, details, timestamp: new Date().toISOString() };
+                if(editId) { 
+                    await supabase.from('reports').update(payload).eq('id', editId); 
+                    setTimeout(() => { showGlobalLoader(false); showNotification("Report Updated!"); btn.disabled = false; cancelEditMode(); toggleReportForm(false); }, 600);
+                } else { 
+                    await supabase.from('reports').insert(payload); 
+                    setTimeout(() => { showGlobalLoader(false); showNotification("Report Sent!"); btn.disabled = false; document.getElementById('report-form').reset(); setupReportForm(); renderInputTable(); toggleReportForm(false); }, 600);
+                }
+            } catch(e) { console.error(e); showGlobalLoader(false); showNotification("Save Failed", "error"); btn.disabled = false; }
+        });
+
+        window.requestEditReport = (id) => { 
+            if(currentUser.role==='coordinator') loadReportToForm(id); else openAuthModal('editReport', id); 
+        }
+        window.requestDeleteReport = (id) => { if(currentUser.role==='coordinator') openConfirmDelete(id); else openAuthModal('deleteReport', id); }
+        
+        function loadReportToForm(id) {
+            const r = allReports.find(x => x.id === id); if(!r) return;
+            toggleReportForm(true);
+            document.getElementById('report-id-hidden').value = r.id; document.getElementById('input-date').value = r.date; selectReportType(r.type);
+            if(currentUser.role === 'coordinator') { document.getElementById('input-admin-select-user').value = r.reporterId; updateReporterInfo(); }
+            document.getElementById('edit-mode-indicator').classList.remove('hidden'); document.getElementById('btn-submit-text').textContent = "Update Report";
+            const rows = document.querySelectorAll('#table-body tr');
+            r.details?.forEach(d => {
+                rows.forEach(tr => {
+                    if(tr.getAttribute('data-label') === d.label) {
+                        const inps = tr.querySelectorAll('input'); const isDel = r.type === 'delivery';
+                        const setVal = (idx, val) => { if(inps[idx]) inps[idx].value = val ? val.toLocaleString('id-ID') : ''; };
+                        const setStr = (idx, val) => { if(inps[idx]) inps[idx].value = val || ''; }
+                        setVal(1, d.ok); setVal(2, d.inprogress); setVal(3, d.mbh); setVal(4, d.missed);
+                        if(isDel) setVal(5, d.claimed);
+                        const off = isDel ? 6 : 5; setVal(off, d.total_int); setStr(off+1, d.feed_int); setVal(off+2, d.total_ext); setStr(off+3, d.feed_ext);
+                        calcRow(tr.querySelector('.sla-input').getAttribute('data-row'));
+                    }
+                })
+            });
+            document.getElementById('view-reports-form').scrollIntoView({behavior: 'smooth'});
+        }
+        window.cancelEditMode = () => {
+            document.getElementById('report-form').reset(); document.getElementById('report-id-hidden').value = '';
+            document.getElementById('edit-mode-indicator').classList.add('hidden'); selectReportType('delivery');
+            const btnText = document.getElementById('btn-submit-text'); if (btnText) btnText.textContent = "Submit Report";
+            setupReportForm(); renderInputTable();
+        }
+
+        async function fetchReports() {
+            const { data, error } = await supabase.from('reports').select('*');
+            if(data) {
+                allReports = data.sort((a,b) => new Date(b.date) - new Date(a.date));
+                renderDashboard(); setupDashboardFilters(); renderReportsTable();
+            }
+        }
+        function listenToReports() {
+            fetchReports();
+            reportsChannel = supabase.channel('reports-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, payload => {
+                    fetchReports();
+                })
+                .subscribe();
+        }
+
+        async function fetchUsers() {
+            const { data, error } = await supabase.from('users').select('*');
+            if(data) {
+                allUsers = data;
+                renderUsersTable();
+                if(currentUser && currentUser.role === 'coordinator') populateAdminUserSelect();
+            }
+        }
+        function listenToUsers() {
+            fetchUsers();
+            usersChannel = supabase.channel('users-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
+                    fetchUsers();
+                })
+                .subscribe();
+        }
+
+        function renderReportsTable() {
+            const fUser = document.getElementById('filter-user') ? document.getElementById('filter-user').value : 'all';
+            const fStart = document.getElementById('hist-date-start') ? document.getElementById('hist-date-start').value : '';
+            const fEnd = document.getElementById('hist-date-end') ? document.getElementById('hist-date-end').value : '';
+            
+            let d = allReports.filter(r => {
+                let matchUser = fUser === 'all' || r.kodeSS === fUser || r.reporterName === fUser;
+                let matchDate = (!fStart || r.date >= fStart) && (!fEnd || r.date <= fEnd);
+                return matchUser && matchDate;
+            });
+            
+            document.getElementById('reports-table-body').innerHTML = d.map(r => {
+                const date = r.date ? new Date(r.date).toLocaleDateString('id-ID') : '-';
+                
+                // Collect Feedback Deduplicated
+                const uniqueFeedInt = new Set(); const uniqueFeedExt = new Set();
+                let hasDetails = false;
+                
+                // Header for details sub-table
+                let detailsHTML = '<div class="w-full min-w-[340px]">'; // Min-width agar tidak gepeng
+                
+                // Tampilkan Header Kecil jika ada data
+                if (r.details && r.details.some(x => x.total > 0)) {
+                    detailsHTML += `
+                    <div class="grid grid-cols-8 gap-2 text-[9px] font-bold text-gray-400 border-b border-gray-200 pb-1 mb-1 px-1 bg-gray-50/80 rounded-t uppercase tracking-wide">
+                        <div class="text-left">Svc</div>
+                        <div class="text-center">Tot</div>
+                        <div class="text-center">OK</div>
+                        <div class="text-center">SLA</div>
+                        <div class="text-center">Inp</div>
+                        <div class="text-center">MBH</div>
+                        <div class="text-center text-red-400">Mis</div>
+                        <div class="text-center text-purple-400">Clm</div>
+                    </div>`;
+                }
+
+                r.details?.forEach(d => {
+                    if(d.total > 0) {
+                        hasDetails = true;
+                        const sla = d.total > 0 ? (d.ok / d.total * 100).toFixed(1) : 0;
+                        
+                        // Determine text color based on SLA config
+                        let slaBg = getSLAColor(sla, r.type); // returns 'bg-[#...]'
+                        let slaText = 'text-red-500';
+                        if (slaBg.includes('34C759')) slaText = 'text-green-600';
+                        else if (slaBg.includes('FF9500')) slaText = 'text-orange-500';
+
+                        detailsHTML += `
+                        <div class="grid grid-cols-8 gap-2 text-[10px] items-center border-b border-dashed border-gray-100 pb-1.5 pt-0.5 last:border-0 px-1 hover:bg-gray-50 transition-colors rounded">
+                            <div class="font-bold text-gray-700 truncate" title="${d.label}">${d.label}</div>
+                            <div class="text-center font-mono text-[#1D1D1F] font-bold">${d.total}</div>
+                            <div class="text-center font-mono text-gray-600">${d.ok}</div>
+                            <div class="text-center font-bold ${slaText}">${sla}%</div>
+                            <div class="text-center font-mono text-gray-400">${d.inprogress}</div>
+                            <div class="text-center font-mono text-orange-400">${d.mbh}</div>
+                            <div class="text-center font-mono text-red-500 font-bold">${d.missed}</div>
+                            <div class="text-center font-mono text-purple-500 font-bold">${d.claimed || 0}</div>
+                        </div>`;
+                        
+                        if(d.feed_int && d.feed_int.trim() !== '-') uniqueFeedInt.add(d.feed_int.trim());
+                        if(d.feed_ext && d.feed_ext.trim() !== '-') uniqueFeedExt.add(d.feed_ext.trim());
+                    }
+                });
+                detailsHTML += '</div>';
+                if (!hasDetails) detailsHTML = '<span class="text-gray-300 italic text-[10px]">No Data</span>';
+                
+                let totInt = 0, totExt = 0; r.details?.forEach(x => { totInt += (x.total_int || 0); totExt += (x.total_ext || 0); });
+                let showButtons = (currentUser.role === 'coordinator') || (currentUser.role === 'leader' && r.reporterId === currentUser.id);
+
+                const feedbackLines = [];
+                uniqueFeedInt.forEach(txt => feedbackLines.push(`<span class="text-blue-600 font-bold text-[9px]">IN:</span> ${txt}`));
+                uniqueFeedExt.forEach(txt => feedbackLines.push(`<span class="text-orange-600 font-bold text-[9px]">EX:</span> ${txt}`));
+
+                return `<tr class="border-b border-gray-100 last:border-0 align-top hover:bg-gray-50 transition-colors">
+                    <td class="p-3 text-[10px] font-mono text-gray-500 font-bold">${date}</td>
+                    <td class="p-3"><div class="font-bold text-[#1D1D1F] text-xs">${r.kodeSS||'-'}</div><div class="text-[9px] text-gray-400 uppercase">${r.reporterName}</div></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${r.type==='delivery'?'bg-blue-50 text-blue-600 border-blue-100':'bg-orange-50 text-orange-600 border-orange-100'}">${r.type.substr(0,3)}</span></td>
+                    <td class="p-3">${detailsHTML}</td>
+                    <td class="p-3 text-center text-xs font-bold text-blue-600">${totInt > 0 ? totInt : '-'}</td>
+                    <td class="p-3 text-center text-xs font-bold text-orange-600">${totExt > 0 ? totExt : '-'}</td>
+                    <td class="p-3 text-[10px] text-gray-600 leading-tight">${feedbackLines.length > 0 ? feedbackLines.join('<br>') : '<span class="text-gray-300 italic">-</span>'}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex flex-col gap-2 items-center justify-center ${showButtons ? '' : 'hidden'}">
+                            <button onclick="requestEditReport('${r.id}')" class="text-blue-500 hover:bg-blue-50 p-1.5 rounded-lg"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="requestDeleteReport('${r.id}')" class="text-red-400 hover:bg-red-50 p-1.5 rounded-lg"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="8" class="p-8 text-center text-gray-400 italic text-xs">No reports found</td></tr>';
+            
+            // Populate Filter User Dropdown
+            if(document.getElementById('filter-user')) {
+                 const sel = document.getElementById('filter-user'); 
+                 const cur = sel.value;
+                 const ssList = [...new Set(allReports.map(r=>r.kodeSS).filter(Boolean))].sort();
+                 sel.innerHTML = '<option value="all">Semua SS</option>' + ssList.map(ss => `<option value="${ss}">${ss}</option>`).join('');
+                 sel.value = cur;
+            }
+        }
+
+        window.toggleUserStatus = async (id, currentStatus) => {
+            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+            try { 
+                await supabase.from('users').update({status: newStatus}).eq('id', id); 
+                showNotification("Status Updated"); 
+            } catch(e) { showNotification("Failed", "error"); }
+        }
+        function renderUsersTable() {
+            const tbody = document.getElementById('users-table-body');
+            if (allUsers.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-400 italic">Empty</td></tr>`; return; }
+            tbody.innerHTML = allUsers.map(u => {
+                const isActive = u.status !== 'inactive';
+                const toggleBtn = (u.username !== 'admin' && u.id !== currentUser.id)
+                    ? `<button onclick="toggleUserStatus('${u.id}', '${isActive?'active':'inactive'}')" class="relative inline-flex items-center h-5 rounded-full w-9 transition-colors focus:outline-none ${isActive ? 'bg-[#34C759]' : 'bg-gray-300'}"><span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform shadow-sm ${isActive ? 'translate-x-4' : 'translate-x-0.5'}"></span></button>`
+                    : `<span class="text-[9px] text-gray-300 font-bold bg-gray-100 px-1 rounded">LOCKED</span>`;
+                return `<tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors ${!isActive?'opacity-50 grayscale':''}">
+                    <td class="p-4 font-bold text-gray-700">${u.name}<br><span class="text-[10px] text-gray-400 font-normal">ID: ${u.username}</span></td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-100 text-gray-500">${u.role}</span></td>
+                    <td class="p-4 text-center">${toggleBtn}</td>
+                    <td class="p-4 text-center"><div class="flex justify-center gap-3"><button onclick="editUser('${u.id}')" class="text-blue-500 hover:text-blue-600"><i class="fa-solid fa-pen"></i></button>${u.id!==currentUser.id && u.username!=='admin' ? `<button onclick="openDeleteModal('${u.id}', '${u.username}')" class="text-red-400 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}</div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.editUser = (id) => {
+            const u = allUsers.find(x=>x.id===id); if(!u) return;
+            document.getElementById('edit-user-id').value = u.id; document.getElementById('new-role').value = u.role;
+            document.getElementById('new-account-status').value = u.status || 'active'; document.getElementById('new-name').value = u.name;
+            document.getElementById('new-username').value = u.username; document.getElementById('new-password').value = u.password;
+            document.getElementById('new-kode-ss').value = u.kodeSS||''; document.getElementById('new-kota').value = u.kotaArea||'';
+            const isAdm = u.username === 'admin';
+            document.getElementById('new-username').readOnly = isAdm; document.getElementById('new-role').disabled = isAdm; document.getElementById('new-account-status').disabled = isAdm;
+            toggleFormFields(); document.getElementById('modal-title').textContent = "Edit User"; document.getElementById('modal-add-user').classList.remove('hidden');
+        }
+        window.prepareAddUser = () => { 
+            document.getElementById('add-user-form').reset(); document.getElementById('edit-user-id').value=''; 
+            document.getElementById('new-role').disabled = false; document.getElementById('new-username').readOnly = false;
+            document.getElementById('new-account-status').disabled = false; document.getElementById('modal-title').textContent = "New User";
+            document.getElementById('modal-add-user').classList.remove('hidden'); 
+        }
+        window.closeAddUserModal = () => document.getElementById('modal-add-user').classList.add('hidden');
+        window.toggleFormFields = () => { const r = document.getElementById('new-role').value; document.getElementById('leader-fields').classList.toggle('hidden', r==='coordinator'); }
+        
+        document.getElementById('add-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const uid = document.getElementById('edit-user-id').value;
+            const roleEl = document.getElementById('new-role'); const statusEl = document.getElementById('new-account-status');
+            const roleVal = roleEl.disabled ? 'coordinator' : roleEl.value; const statusVal = statusEl.disabled ? 'active' : statusEl.value;
+            const rawUsername = document.getElementById('new-username').value;
+            const cleanUsername = rawUsername.trim().toLowerCase();
+            const cleanPassword = document.getElementById('new-password').value.trim();
+            if (!/^\d+$/.test(cleanUsername) && cleanUsername !== 'admin') { showNotification("ID must be numeric", "error"); return; }
+            if (cleanPassword.length < 6) { showNotification("Password min 6 chars", "error"); return; }
+            const data = { role: roleVal, name: document.getElementById('new-name').value, username: cleanUsername, password: cleanPassword, kodeSS: document.getElementById('new-kode-ss').value, kotaArea: document.getElementById('new-kota').value, status: statusVal };
+            if(!uid) data.created_at = new Date().toISOString();
+            try { 
+                if(!uid) {
+                    const { data: snapCheck } = await supabase.from('users').select('*').eq('username', cleanUsername);
+                    if(snapCheck && snapCheck.length > 0) { showNotification("ID already taken", "error"); return; }
+                }
+                if(uid) await supabase.from('users').update(data).eq('id', uid); else await supabase.from('users').insert(data); 
+                showNotification("User Saved!"); closeAddUserModal(); 
+            } catch(e) { showNotification("Save Failed", "error"); }
+        });
+
+        window.openAuthModal = (action, id) => { targetId = id; pendingAction = action; document.getElementById('auth-code-input').value=''; document.getElementById('modal-auth-code').classList.remove('hidden'); setTimeout(() => document.getElementById('auth-code-input').focus(), 100); }
+        window.closeAuthModal = () => document.getElementById('modal-auth-code').classList.add('hidden');
+        window.verifyAuthCode = () => { if(document.getElementById('auth-code-input').value === currentAdminCode) { closeAuthModal(); if(pendingAction === 'deleteReport') openConfirmDelete(targetId); if(pendingAction === 'editReport') loadReportToForm(targetId); } else showNotification("Wrong Code", "error"); }
+        function openConfirmDelete(id, username) { 
+            targetId = id; 
+            pendingAction = username ? 'deleteUser' : 'deleteReport'; 
+            document.getElementById('modal-confirm-title').textContent = "Are you sure?";
+            document.getElementById('delete-confirmation-text').textContent = username ? `Delete user ${username}?` : "Delete this report?"; 
+            document.getElementById('btn-confirm-action').textContent = "Delete";
+            document.getElementById('btn-confirm-action').className = "py-3 bg-red-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-500/20";
+            document.getElementById('modal-icon').className = "fa-solid fa-trash-can";
+            document.getElementById('modal-confirm-delete').classList.remove('hidden'); 
+        }
+        window.openDeleteModal = openConfirmDelete; window.closeDeleteModal = () => document.getElementById('modal-confirm-delete').classList.add('hidden');
+        
+        window.executeDelete = async () => { 
+            try { 
+                if(pendingAction === 'deleteReport') await supabase.from('reports').delete().eq('id', targetId); 
+                if(pendingAction === 'deleteUser') await supabase.from('users').delete().eq('id', targetId);
+                if(pendingAction === 'logout') { logout(); closeDeleteModal(); return; } // Handle logout
+                
+                showNotification("Deleted."); closeDeleteModal(); 
+            } catch(e) { showNotification("Delete Failed", "error"); } 
+        }
+
+        window.showTab = (t) => {
+            if (t === 'settings' && currentUser && currentUser.role !== 'coordinator') { showNotification("Access Denied", "error"); return; }
+            const tabs = ['dashboard', 'reports', 'settings'];
+            tabs.forEach(x => { document.getElementById('tab-' + x).classList.add('hidden'); document.getElementById('nav-' + x).classList.remove('nav-active'); });
+            document.getElementById('tab-' + t).classList.remove('hidden'); document.getElementById('nav-' + t).classList.add('nav-active');
+        }
+
+        switchLoginTab('user');
+    </script>
+</body>
+</html>
