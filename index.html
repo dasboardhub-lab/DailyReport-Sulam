@@ -796,7 +796,7 @@
         let currentUser = null, allReports = [], allUsers = [], chartAnnual = null, chartMonthly = null;
         let pendingAction = null, targetId = null, currentAdminCode = "123456";
         const ROW_LABELS = ['REG', 'ECO', 'ND', 'SD/SDS', 'BIG'];
-        let reportsChannel = null, usersChannel = null;
+        let reportsInterval = null, usersInterval = null; // Diubah dari Channel ke Interval
         let currentDashType = 'delivery'; 
         
         // --- SLA CONFIG (Default Values) ---
@@ -990,7 +990,7 @@
 
         async function logout() {
             try {
-                if(reportsChannel) supabase.removeChannel(reportsChannel); if(usersChannel) supabase.removeChannel(usersChannel);
+                if(reportsInterval) clearInterval(reportsInterval); if(usersInterval) clearInterval(usersInterval);
                 currentUser = null; allReports = []; allUsers = [];
                 document.getElementById('main-app').classList.add('hidden');
                 document.getElementById('login-page').classList.remove('hidden');
@@ -1512,9 +1512,14 @@
 
             if(!picId || !date) return showNotification("Missing Info", "error");
             if(!editId) {
-                const qDup = query(collection(db,'artifacts', appId, 'public', 'data', 'reports'), where('reporterId','==',picId), where('date','==',date), where('type','==',type));
-                const dupSnap = await getDocs(qDup);
-                if(!dupSnap.empty) return showNotification("Laporan sudah ada!", "error");
+                const { data: dupData } = await supabase
+                    .from('reports')
+                    .select('id')
+                    .eq('reporterId', picId)
+                    .eq('date', date)
+                    .eq('type', type);
+                
+                if(dupData && dupData.length > 0) return showNotification("Laporan sudah ada!", "error");
             }
             
             let gTotal = 0; const details = [];
@@ -1588,11 +1593,9 @@
         }
         function listenToReports() {
             fetchReports();
-            reportsChannel = supabase.channel('reports-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, payload => {
-                    fetchReports();
-                })
-                .subscribe();
+            // Menggunakan interval polling sebagai pengganti WebSocket yang dibatasi di Canvas
+            if(reportsInterval) clearInterval(reportsInterval);
+            reportsInterval = setInterval(fetchReports, 15000); // refresh otomatis tiap 15 detik
         }
 
         async function fetchUsers() {
@@ -1605,11 +1608,9 @@
         }
         function listenToUsers() {
             fetchUsers();
-            usersChannel = supabase.channel('users-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
-                    fetchUsers();
-                })
-                .subscribe();
+            // Menggunakan interval polling sebagai pengganti WebSocket yang dibatasi di Canvas
+            if(usersInterval) clearInterval(usersInterval);
+            usersInterval = setInterval(fetchUsers, 15000); // refresh otomatis tiap 15 detik
         }
 
         function renderReportsTable() {
